@@ -1,0 +1,13 @@
+# Virtual Environment
+.venv/
+# PyCharm/IDE Files
+.idea/
+# Python files
+__pycache__/
+*.pyc
+# Logs and data
+*.log
+# Poetry Cache (если он в папке проекта)
+.cache/
+# Secret files
+.env
