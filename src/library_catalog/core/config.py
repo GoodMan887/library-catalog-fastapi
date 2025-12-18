@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     app_name: str = "Library Catalog API"
     environment: Literal["development", "staging", "production"]
     debug: bool
+    database_pool_size: int = 5
     database_url: Union[PostgresDsn, str]
     api_v1_prefix: str = "/api/v1"
     log_level: str = "INFO"
