@@ -7,12 +7,12 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-# Импортировать config и Base
 from src.library_catalog.core.config import settings
 from src.library_catalog.core.database import Base
 
-# Импортировать все модели (ОБЯЗАТЕЛЬНО!)
 from src.library_catalog.data.models import book
+
+from sqlalchemy.ext.asyncio import create_async_engine
 
 
 # this is the Alembic Config object, which provides
@@ -71,9 +71,10 @@ def do_run_migrations(connection: Connection) -> None:
 async def run_async_migrations() -> None:
     """Run migrations in 'online' mode with async engine."""
 
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+    database_url = str(settings.database_url)
+
+    connectable = create_async_engine(
+        database_url,
         poolclass=pool.NullPool,
     )
 
