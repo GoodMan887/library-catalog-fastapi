@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     app_name: str = "Library Catalog API"
     environment: Literal["development", "staging", "production"]
     debug: bool
-    database_url: PostgresDsn
+    database_url_str: PostgresDsn
 
     model_config = SettingsConfigDict(
         env_file=".env",
