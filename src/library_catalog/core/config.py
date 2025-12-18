@@ -4,18 +4,24 @@ from pydantic_settings import (
     SettingsConfigDict,
 )
 from functools import lru_cache
-from typing import Literal
+from typing import (
+    Literal,
+    Union,
+)
 
 
 class Settings(BaseSettings):
     app_name: str = "Library Catalog API"
     environment: Literal["development", "staging", "production"]
     debug: bool
-    database_url_str: PostgresDsn
+    database_url: Union[PostgresDsn, str]
+    api_v1_prefix: str = "/api/v1"
+    log_level: str = "INFO"
 
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=False,
+        extra='ignore'
     )
 
     @property
