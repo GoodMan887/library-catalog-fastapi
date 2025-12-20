@@ -14,10 +14,15 @@ class Settings(BaseSettings):
     app_name: str = "Library Catalog API"
     environment: Literal["development", "staging", "production"]
     debug: bool
-    database_pool_size: int = 5
+    database_pool_size: int = 20
     database_url: Union[PostgresDsn, str]
     api_v1_prefix: str = "/api/v1"
     log_level: str = "INFO"
+    docs_url: str = "/docs"
+    redoc_url: str = "/redoc"
+    cors_origins: list[str] = ["*"]
+    openlibrary_base_url: str = "https://openlibrary.org"
+    openlibrary_timeout: float = 10.0
 
     model_config = SettingsConfigDict(
         env_file=".env",

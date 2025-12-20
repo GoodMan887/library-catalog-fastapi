@@ -1,22 +1,32 @@
 from typing import Any
 
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
 
 class AppException(Exception):
-    """Базовое исключение для всего приложения."""
-    def __init__(
-            self,
-            message: str = "An internal error occurred",
-            status_code: int = 500,
-    ):
+    """Базовое исключение приложения."""
+    def __init__(self, message: str, status_code: int = 400):
         self.message = message
         self.status_code = status_code
-        super().__init__(message)
+        super().__init__(self.message)
 
 
 class NotFoundException(AppException):
-    """Исключение для случаев, когда ресурс не найден (404)."""
-    def __init__(self, resource: str, identifier: Any):
-        self.resource = resource
-        self.identifier = identifier
-        message = f"{resource} with identifier {identifier} not found"
-        super().__init__(message=message, status_code=404)
+    """Ресурс не найден."""
+    def __init__(self, resource: str, identifier: any):
+        super().__init__(
+            message=f"{resource} with id '{identifier}' not found",
+            status_code=404,
+        )
+
+
+def register_exception_handlers(app: FastAPI) -> None:
+    """Зарегистрировать обработчики исключений."""
+
+    @app.exception_handler(AppException)
+    async def app_exception_handler(request: Request, exc: AppException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.message}
+        )
