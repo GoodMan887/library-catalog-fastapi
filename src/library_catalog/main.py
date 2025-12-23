@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .core.clients import clients_manager
 from .core.config import settings
 from .core.database import dispose_engine
 from .core.exceptions import register_exception_handlers
@@ -18,7 +19,7 @@ from .api.v1.routers import books, health
 @asynccontextmanager
 async def life_span(app: FastAPI):
     """
-    Lifecycle manager для FastAPI.
+    Lifecycle manager с proper cleanup.
 
     Выполняется при:
     - startup: настройка логирования
@@ -31,8 +32,15 @@ async def life_span(app: FastAPI):
     yield
 
     # Shutdown
+    print("👋 Shutting down...")
+
+    # ✅ Закрыть все внешние клиенты
+    await clients_manager.close_all()
+
+    # ✅ Закрыть соединения с БД
     await dispose_engine()
-    print("👋 Application stopped")
+
+    print("✅ Application stopped")
 
 
 # ========== CREATE APP ==========

@@ -8,22 +8,19 @@ from ..core.database import get_db
 from ..data.repositories.book_repository import BookRepository
 from ..domain.services.book_service import BookService
 from ..external.openlibrary.client import OpenLibraryClient
-from ..core.config import settings
+from ..core.clients import clients_manager
 
 
 # ========== EXTERNAL CLIENTS (Singletons) ==========
 
-@lru_cache()
 def get_openlibrary_client() -> OpenLibraryClient:
     """
-    Получить singleton OpenLibraryClient.
+    Получить OpenLibrary клиент из менеджера.
 
-    lru_cache создает клиент один раз и переиспользует.
+    Клиент создается lazy и переиспользуется между запросами.
+    НЕ использует lru_cache для корректного cleanup.
     """
-    return OpenLibraryClient(
-        base_url=settings.openlibrary_base_url,
-        timeout=settings.openlibrary_timeout,
-    )
+    return clients_manager.get_openlibrary()
 
 
 # ========== REPOSITORIES ==========
