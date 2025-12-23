@@ -1,10 +1,7 @@
 from abc import ABC, abstractmethod
 import httpx
 import logging
-import time
-
-from sqlalchemy.util import await_only
-from watchfiles import awatch
+import asyncio
 
 
 class BaseApiClient(ABC):
@@ -61,7 +58,7 @@ class BaseApiClient(ABC):
 
         for attempt in range(self.retries):
             try:
-                self.logger.debug(f"{method} {url} params={params}")
+                self.logger.debug(f"[Attempt {attempt + 1}/{self.retries}] {method} {url}")
 
                 response = await self._client.request(
                     method=method,
@@ -72,16 +69,39 @@ class BaseApiClient(ABC):
                 )
 
                 response.raise_for_status()
+
+                # Обработка пустых ответов
+                if response.status_code == 204 or not response.content:
+                    return {}
+
                 return response.json()
+
             except httpx.HTTPStatusError as e:
                 # 5xx ошибки - retry
                 if e.response.status_code >= 500 and attempt < self.retries - 1:
                     wait_time = self.backoff * (2 ** attempt)
                     self.logger.warning(f"Server error, retrying in {wait_time}s...")
-                    time.sleep(wait_time)
+                    await asyncio.sleep(wait_time)
                 else:
-                    self.logger.error(f"HTTP error: {e}")
+                    self.logger.error(f"HTTP {e.response.status_code}: {e}")
                     raise
+
+            except httpx.TimeoutException:
+                if attempt == self.retries - 1:
+                    self.logger.error(f"Timeout after {self.retries} attempts")
+                    raise
+
+                wait_time = self.backoff * (2 ** attempt)
+                self.logger.info(f"Timeout, retrying in {wait_time}s...")
+                await asyncio.sleep(wait_time)
+
+            except httpx.RequestError as e:
+                self.logger.error(f"Request error: {e}")
+                if attempt == self.retries - 1:
+                    raise
+
+                wait_time = self.backoff * (2 ** attempt)
+                await asyncio.sleep(wait_time)
 
     async def _get(self, path: str, **kwargs) -> dict:
         """GET запрос."""
