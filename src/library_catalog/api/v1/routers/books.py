@@ -2,13 +2,11 @@ from uuid import UUID
 from typing import Annotated
 
 from fastapi import  APIRouter, Depends, Query, status
-from watchfiles import awatch
 
 from ..schemas.book import (
     BookCreate,
     BookUpdate,
-    ShowBook,
-    BookFilters
+    ShowBook
 )
 from ..schemas.common import PaginatedResponse, PaginationParams
 from ...dependencies import BookServiceDep

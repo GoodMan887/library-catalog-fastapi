@@ -97,12 +97,3 @@ class ShowBook(BookBase):
             ]
         }
     }
-
-
-class BookFilters(BaseModel):
-    """Фильтры для поиска книг."""
-    title: str | None = Field(None, description="Поиск по названию (частичное совпадение)")
-    author: str | None = Field(None, description="Поиск по автору (частичное совпадение)")
-    genre: str | None = Field(None, description="Точное совпадение жанра")
-    year: int | None = Field(None, description="Точное совпадение года")
-    available: bool | None = Field(None, description="Фильтр по доступности")
