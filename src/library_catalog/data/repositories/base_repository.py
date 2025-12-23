@@ -13,11 +13,16 @@ class BaseRepository(Generic[T]):
         self.model = model
 
     async def create(self, **kwargs) -> T:
-        """Создать запись."""
+        """
+        Создать запись БЕЗ commit.
+
+        flush() генерирует ID и проверяет constraints,
+        но оставляет commit вызывающему коду.
+        """
         instance = self.model(**kwargs)
         self.session.add(instance)
         await self.session.flush()
-        await self.session.commit()
+        await self.session.refresh(instance)
         return instance
 
     async def get_by_id(self, id: UUID) -> T | None:
@@ -29,7 +34,7 @@ class BaseRepository(Generic[T]):
         return await self.session.get(self.model, id)
 
     async def update(self, id: UUID, **kwargs) -> T | None:
-        """Обновить запись."""
+        """Обновить запись БЕЗ commit."""
         instance = await self.get_by_id(id)
         if not instance:
             return None
@@ -38,17 +43,18 @@ class BaseRepository(Generic[T]):
             if hasattr(instance, key):
                 setattr(instance, key, value)
 
-        await self.session.commit()
+        await self.session.flush()
+        await self.session.refresh(instance)
         return instance
 
     async def delete(self, id: UUID) -> bool:
-        """Удалить запись."""
+        """Удалить запись БЕЗ commit."""
         instance = await self.get_by_id(id)
         if not instance:
             return False
 
         await self.session.delete(instance)
-        await self.session.commit()
+        await self.session.flush()
         return True
 
     async def get_all(

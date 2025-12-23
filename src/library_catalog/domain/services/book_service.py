@@ -63,7 +63,10 @@ class BookService:
             extra=extra,
         )
 
-        # 5. Маппинг в DTO
+        # 5. Явный commit в сервисе
+        await self.book_repo.session.commit()
+
+        # 6. Маппинг в DTO
         return BookMapper.to_show_book(book)
 
     async def get_book(self, book_id: UUID) -> ShowBook:
@@ -106,6 +109,8 @@ class BookService:
             **book_data.dict(exclude_unset=True),
         )
 
+        await self.book_repo.session.commit()
+
         return BookMapper.to_show_book(updated)
 
     async def delete_book(self, book_id: UUID) -> None:
@@ -118,6 +123,8 @@ class BookService:
         deleted = await self.book_repo.delete(book_id)
         if not deleted:
             raise BookNotFoundException(book_id)
+
+        await self.book_repo.session.commit()
 
     async def search_books(
             self,
