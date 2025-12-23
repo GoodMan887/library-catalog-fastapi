@@ -32,3 +32,19 @@ dev = [
     "ruff (>=0.14.9,<0.15.0)",
     "mypy (>=1.19.1,<2.0.0)"
 ]
+
+[tool.black]
+line-length = 88
+target-version = ['py313']
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+select = ["E", "F", "I", "B"] # Базовые правила (ошибки, импорты, стиль)
+
+[tool.mypy]
+python_version = "3.13"
+mypy_path = "src"
+explicit_package_bases = true
+strict = false
+ignore_missing_imports = true

@@ -11,10 +11,10 @@ class Base(DeclarativeBase):
 
 
 engine = create_async_engine(
-    # settings.database_url_str,
-    str(settings.database_url),
+    settings.database_url,
+    # str(settings.database_url),
     pool_size=settings.database_pool_size,
-    echo=settings.debug
+    echo=settings.debug,
 )
 
 async_session_maker = async_sessionmaker(
@@ -33,3 +33,8 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             raise
         finally:
             await session.close()
+
+
+async def dispose_engine() -> None:
+    """Закрыть все соединения с БД."""
+    await engine.dispose()
