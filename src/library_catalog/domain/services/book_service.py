@@ -1,8 +1,8 @@
 from uuid import UUID
 from ...api.v1.schemas.book import BookCreate, BookUpdate, ShowBook
-from ...data.repositories.book_repository import BookRepository
-from ...external.openlibrary.client import OpenLibraryClient
+from ...data.repositories.protocols import BookRepositoryProtocol
 from ..exceptions import *
+from ...external.protocols import MetadataGatewayProtocol
 from ..mappers.book_mapper import BookMapper
 
 import logging
@@ -16,11 +16,11 @@ class BookService:
     """
     def __init__(
             self,
-            book_repository: BookRepository,
-            openlibrary_client: OpenLibraryClient,
+            book_repository: BookRepositoryProtocol,
+            metadata_gateway: MetadataGatewayProtocol,
     ):
         self.book_repo = book_repository
-        self.ol_client = openlibrary_client
+        self.metadata_gateway = metadata_gateway
         self.logger = logging.getLogger(__name__)
 
     async def create_book(self, book_data: BookCreate) -> ShowBook:
@@ -282,7 +282,7 @@ class BookService:
         Не выбрасывает исключение если API недоступен.
         """
         try:
-            extra = await self.ol_client.enrich(
+            extra = await self.metadata_gateway.enrich(
                 title=book_data.title,
                 author=book_data.author,
                 isbn=book_data.isbn,

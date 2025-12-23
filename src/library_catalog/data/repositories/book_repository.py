@@ -1,11 +1,12 @@
 from src.library_catalog.data.models.book import Book
 from src.library_catalog.data.repositories.base_repository import BaseRepository
+from .protocols import BookRepositoryProtocol
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
 from typing import List, Any
 
 
-class BookRepository(BaseRepository[Book]):
+class BookRepository(BaseRepository[Book], BookRepositoryProtocol):
     def __init__(self, session: AsyncSession):
         super().__init__(session, Book)
 

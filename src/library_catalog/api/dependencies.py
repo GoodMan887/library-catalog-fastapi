@@ -1,4 +1,3 @@
-from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends
@@ -6,8 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.database import get_db
 from ..data.repositories.book_repository import BookRepository
+from ..data.repositories.protocols import BookRepositoryProtocol
 from ..domain.services.book_service import BookService
 from ..external.openlibrary.client import OpenLibraryClient
+from ..external.protocols import MetadataGatewayProtocol
 from ..core.clients import clients_manager
 
 
@@ -27,7 +28,7 @@ def get_openlibrary_client() -> OpenLibraryClient:
 
 async def get_book_repository(
         db: Annotated[AsyncSession, Depends(get_db)]
-) -> BookRepository:
+) -> BookRepositoryProtocol:
     """
     Создать BookRepository для текущей сессии БД.
 
@@ -39,8 +40,8 @@ async def get_book_repository(
 # ========== SERVICES ==========
 
 async def get_book_service(
-        book_repo: Annotated[BookRepository, Depends(get_book_repository)],
-        ol_client: Annotated[OpenLibraryClient, Depends(get_openlibrary_client)],
+        book_repo: Annotated[BookRepositoryProtocol, Depends(get_book_repository)],
+        ol_client: Annotated[MetadataGatewayProtocol, Depends(get_openlibrary_client)],
 ) -> BookService:
     """
     Создать BookService с внедренными зависимостями.
@@ -53,7 +54,7 @@ async def get_book_service(
     """
     return BookService(
         book_repository=book_repo,
-        openlibrary_client=ol_client,
+        metadata_gateway=ol_client,
     )
 
 
