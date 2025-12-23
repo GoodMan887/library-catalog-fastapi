@@ -3,7 +3,12 @@ from typing import Annotated
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..core.database import get_db
+from ..application.uow.protocol import UnitOfWorkProtocol
+from ..application.uow.sqlalchemy import SqlAlchemyUnitOfWork
+from ..core.database import (
+    get_db,
+    async_session_maker,
+)
 from ..data.repositories.book_repository import BookRepository
 from ..data.repositories.protocols import BookRepositoryProtocol
 from ..domain.services.book_service import BookService
@@ -13,6 +18,7 @@ from ..core.clients import clients_manager
 
 
 # ========== EXTERNAL CLIENTS (Singletons) ==========
+
 
 def get_openlibrary_client() -> OpenLibraryClient:
     """
@@ -26,8 +32,9 @@ def get_openlibrary_client() -> OpenLibraryClient:
 
 # ========== REPOSITORIES ==========
 
+
 async def get_book_repository(
-        db: Annotated[AsyncSession, Depends(get_db)]
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> BookRepositoryProtocol:
     """
     Создать BookRepository для текущей сессии БД.
@@ -39,9 +46,15 @@ async def get_book_repository(
 
 # ========== SERVICES ==========
 
+
+async def get_uow() -> SqlAlchemyUnitOfWork:
+    """Провайдер Unit of Work."""
+    return SqlAlchemyUnitOfWork(async_session_maker)
+
+
 async def get_book_service(
-        book_repo: Annotated[BookRepositoryProtocol, Depends(get_book_repository)],
-        ol_client: Annotated[MetadataGatewayProtocol, Depends(get_openlibrary_client)],
+    uow: Annotated[UnitOfWorkProtocol, Depends(get_uow)],
+    ol_client: Annotated[MetadataGatewayProtocol, Depends(get_openlibrary_client)],
 ) -> BookService:
     """
     Создать BookService с внедренными зависимостями.
@@ -53,7 +66,7 @@ async def get_book_service(
     4. Все внедрится в BookService
     """
     return BookService(
-        book_repository=book_repo,
+        uow=uow,
         metadata_gateway=ol_client,
     )
 

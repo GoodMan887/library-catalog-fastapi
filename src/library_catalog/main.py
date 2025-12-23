@@ -1,6 +1,7 @@
 """
 Library Catalog API - Точка входа приложения.
 """
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -15,6 +16,7 @@ from .api.v1.routers import books, health
 
 
 # ========== LIFECYCLE EVENTS ==========
+
 
 @asynccontextmanager
 async def life_span(app: FastAPI):
@@ -82,13 +84,14 @@ app.include_router(
 
 # ========== ROOT ENDPOINT ==========
 
+
 @app.get("/")
 async def root():
     """Корневой эндпоинт."""
     return {
         "message": "Welcome to Library Catalog API",
         "docs": settings.docs_url,
-        "version": "1.0.0"
+        "version": "1.0.0",
     }
 
 

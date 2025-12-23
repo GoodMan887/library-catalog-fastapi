@@ -11,12 +11,12 @@ class BookRepository(BaseRepository[Book], BookRepositoryProtocol):
         super().__init__(session, Book)
 
     def _build_filter_clauses(
-            self,
-            title: str | None = None,
-            author: str | None = None,
-            genre: str | None = None,
-            year: int | None = None,
-            available: bool | None = None
+        self,
+        title: str | None = None,
+        author: str | None = None,
+        genre: str | None = None,
+        year: int | None = None,
+        available: bool | None = None,
     ) -> List[Any]:
         """Вспомогательный метод для построения условий WHERE."""
         filters = []
@@ -36,24 +36,19 @@ class BookRepository(BaseRepository[Book], BookRepositoryProtocol):
         return filters
 
     async def find_by_filters(
-            self,
-            title: str | None = None,
-            author: str | None = None,
-            genre: str | None = None,
-            year: int | None = None,
-            available: bool | None = None,
-            limit: int = 20,
-            offset: int = 0,
+        self,
+        title: str | None = None,
+        author: str | None = None,
+        genre: str | None = None,
+        year: int | None = None,
+        available: bool | None = None,
+        limit: int = 20,
+        offset: int = 0,
     ) -> list[Book]:
         """Поиск книг с фильтрацией и пагинацией."""
         filters = self._build_filter_clauses(title, author, genre, year, available)
 
-        request = (
-            select(self.model)
-            .where(and_(*filters))
-            .limit(limit)
-            .offset(offset)
-        )
+        request = select(self.model).where(and_(*filters)).limit(limit).offset(offset)
 
         result = await self.session.execute(request)
         return list(result.scalars().all())
@@ -66,12 +61,12 @@ class BookRepository(BaseRepository[Book], BookRepositoryProtocol):
         return result.scalars().first()
 
     async def count_by_filters(
-            self,
-            title: str | None = None,
-            author: str | None = None,
-            genre: str | None = None,
-            year: int | None = None,
-            available: bool | None = None,
+        self,
+        title: str | None = None,
+        author: str | None = None,
+        genre: str | None = None,
+        year: int | None = None,
+        available: bool | None = None,
     ) -> int:
         """Подсчитать количество книг по фильтрам."""
         filters = self._build_filter_clauses(title, author, genre, year, available)

@@ -8,9 +8,9 @@ class OpenLibraryClient(BaseApiClient):
     """Клиент для Open Library API."""
 
     def __init__(
-            self,
-            base_url: str = "https://openlibrary.org",
-            timeout: float = 10.0,
+        self,
+        base_url: str = "https://openlibrary.org",
+        timeout: float = 10.0,
     ):
         super().__init__(base_url, timeout=timeout)
 
@@ -31,10 +31,7 @@ class OpenLibraryClient(BaseApiClient):
             OpenLibraryException: При ошибке API
         """
         try:
-            data = await self._get(
-                "/search.json",
-                params={"isbn": isbn, "limit": 1}
-            )
+            data = await self._get("/search.json", params={"isbn": isbn, "limit": 1})
 
             docs = data.get("docs", [])
             if not docs:
@@ -48,19 +45,14 @@ class OpenLibraryClient(BaseApiClient):
             raise OpenLibraryException(str(e))
 
     async def search_by_title_author(
-            self,
-            title: str,
-            author: str,
+        self,
+        title: str,
+        author: str,
     ) -> dict:
         """Поиск по названию и автору."""
         try:
             data = await self._get(
-                "/search.json",
-                params={
-                    "title": title,
-                    "author": author,
-                    "limit": 1
-                }
+                "/search.json", params={"title": title, "author": author, "limit": 1}
             )
 
             docs = data.get("docs", [])
@@ -75,10 +67,10 @@ class OpenLibraryClient(BaseApiClient):
             raise OpenLibraryException(str(e))
 
     async def enrich(
-            self,
-            title: str,
-            author: str,
-            isbn: str | None = None,
+        self,
+        title: str,
+        author: str,
+        isbn: str | None = None,
     ) -> dict:
         """
         Обогатить данные книги.

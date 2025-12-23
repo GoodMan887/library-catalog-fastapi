@@ -1,6 +1,6 @@
 from uuid import UUID
 from ...api.v1.schemas.book import BookCreate, BookUpdate, ShowBook
-from ...data.repositories.protocols import BookRepositoryProtocol
+from ...application.uow.protocol import UnitOfWorkProtocol
 from ..exceptions import *
 from ...external.protocols import MetadataGatewayProtocol
 from ..mappers.book_mapper import BookMapper
@@ -14,12 +14,13 @@ class BookService:
 
     Содержит всю бизнес-логику приложения.
     """
+
     def __init__(
-            self,
-            book_repository: BookRepositoryProtocol,
-            metadata_gateway: MetadataGatewayProtocol,
+        self,
+        uow: UnitOfWorkProtocol,
+        metadata_gateway: MetadataGatewayProtocol,
     ):
-        self.book_repo = book_repository
+        self.uow = uow
         self.metadata_gateway = metadata_gateway
         self.logger = logging.getLogger(__name__)
 
@@ -50,16 +51,17 @@ class BookService:
                 "title": book_data.title,
                 "author": book_data.author,
                 "isbn": book_data.isbn,
-            }
+            },
         )
 
-        try:
+        # Вся работа с БД теперь внутри контекстного менеджера
+        async with self.uow as uow:
             # 1. Валидация бизнес-правил
             self._validate_book_data(book_data)
 
             # 2. Проверка уникальности ISBN
             if book_data.isbn:
-                existing = await self.book_repo.find_by_isbn(book_data.isbn)
+                existing = await uow.books.find_by_isbn(book_data.isbn)
                 if existing:
                     raise BookAlreadyExistsException(book_data.isbn)
 
@@ -67,7 +69,7 @@ class BookService:
             extra = await self._enrich_book_data(book_data)
 
             # 4. Создание в БД
-            book = await self.book_repo.create(
+            book = await uow.books.create(
                 title=book_data.title,
                 author=book_data.author,
                 year=book_data.year,
@@ -79,33 +81,14 @@ class BookService:
             )
 
             # 5. Явный commit в сервисе
-            await self.book_repo.session.commit()
+            await uow.commit()
 
             self.logger.info(
-                "Book created successfully",
-                extra={"book_id": str(book.book_id)}
+                "Book created successfully", extra={"book_id": str(book.book_id)}
             )
 
             # 6. Маппинг в DTO
             return BookMapper.to_show_book(book)
-
-        except BookAlreadyExistsException:
-            self.logger.warning(
-                "Duplicate ISBN",
-                extra={"isbn": book_data.isbn}
-            )
-            raise
-
-        except Exception as e:
-            self.logger.error(
-                "Failed to create book",
-                extra={
-                    "error": str(e),
-                    "title": book_data.title,
-                },
-                exc_info=True
-            )
-            raise
 
     async def get_book(self, book_id: UUID) -> ShowBook:
         """
@@ -114,16 +97,17 @@ class BookService:
         Raises:
             BookNotFoundException: Если книга не найдена
         """
-        book = await self.book_repo.get_by_id(book_id)
-        if book is None:
-            raise BookNotFoundException(book_id)
+        async with self.uow as uow:
+            book = await uow.books.get_by_id(book_id)
+            if book is None:
+                raise BookNotFoundException(book_id)
 
-        return BookMapper.to_show_book(book)
+            return BookMapper.to_show_book(book)
 
     async def update_book(
-            self,
-            book_id: UUID,
-            book_data: BookUpdate,
+        self,
+        book_id: UUID,
+        book_data: BookUpdate,
     ) -> ShowBook:
         """
         Обновить книгу.
@@ -135,13 +119,13 @@ class BookService:
             "Updating book",
             extra={
                 "book_id": str(book_id),
-                "update_fields": book_data.model_dump(exclude_unset=True)
-            }
+                "update_fields": book_data.model_dump(exclude_unset=True),
+            },
         )
 
-        try:
+        async with self.uow as uow:
             # Проверить существование
-            existing = await self.book_repo.get_by_id(book_id)
+            existing = await uow.books.get_by_id(book_id)
             if existing is None:
                 raise BookNotFoundException(book_id)
 
@@ -152,27 +136,18 @@ class BookService:
                 self._validate_pages(book_data.pages)
 
             # Обновить
-            updated = await self.book_repo.update(
+            updated = await uow.books.update(
                 book_id,
                 **book_data.model_dump(exclude_unset=True),
             )
 
-            await self.book_repo.session.commit()
+            await uow.commit()
 
             self.logger.info(
-                "Book updated successfully",
-                extra={"book_id": str(book_id)}
+                "Book updated successfully", extra={"book_id": str(book_id)}
             )
 
             return BookMapper.to_show_book(updated)
-
-        except Exception as e:
-            self.logger.error(
-                "Failed to update book",
-                extra={"book_id": str(book_id), "error": str(e)},
-                exc_info=True
-            )
-            raise
 
     async def delete_book(self, book_id: UUID) -> None:
         """
@@ -182,47 +157,31 @@ class BookService:
             BookNotFoundException: Если книга не найдена
         """
 
-        self.logger.info(
-            "Deleting book",
-            extra={"book_id": str(book_id)}
-        )
+        self.logger.info("Deleting book", extra={"book_id": str(book_id)})
 
-        try:
-            deleted = await self.book_repo.delete(book_id)
+        async with self.uow as uow:
+            deleted = await uow.books.delete(book_id)
             if not deleted:
                 self.logger.warning(
-                    "Book not found for deletion",
-                    extra={"book_id": str(book_id)}
+                    "Book not found for deletion", extra={"book_id": str(book_id)}
                 )
                 raise BookNotFoundException(book_id)
 
-            await self.book_repo.session.commit()
+            await uow.commit()
 
             self.logger.info(
-                "Book deleted successfully",
-                extra={"book_id": str(book_id)}
+                "Book deleted successfully", extra={"book_id": str(book_id)}
             )
-
-        except BookNotFoundException:
-            raise
-
-        except Exception as e:
-            self.logger.error(
-                "Failed to delete book",
-                extra={"book_id": str(book_id), "error": str(e)},
-                exc_info=True
-            )
-            raise
 
     async def search_books(
-            self,
-            title: str | None = None,
-            author: str | None = None,
-            genre: str | None = None,
-            year: int | None = None,
-            available: bool | None = None,
-            limit: int = 20,
-            offset: int = 0,
+        self,
+        title: str | None = None,
+        author: str | None = None,
+        genre: str | None = None,
+        year: int | None = None,
+        available: bool | None = None,
+        limit: int = 20,
+        offset: int = 0,
     ) -> tuple[list[ShowBook], int]:
         """
         Поиск книг с фильтрацией и пагинацией.
@@ -230,27 +189,29 @@ class BookService:
         Returns:
             tuple: (список книг, общее количество)
         """
-        # Получить книги
-        books = await self.book_repo.find_by_filters(
-            title=title,
-            author=author,
-            genre=genre,
-            year=year,
-            available=available,
-            limit=limit,
-            offset=offset,
-        )
 
-        # Подсчитать общее количество
-        total = await self.book_repo.count_by_filters(
-            title=title,
-            author=author,
-            genre=genre,
-            year=year,
-            available=available,
-        )
+        async with self.uow as uow:
+            # Получить книги
+            books = await uow.books.find_by_filters(
+                title=title,
+                author=author,
+                genre=genre,
+                year=year,
+                available=available,
+                limit=limit,
+                offset=offset,
+            )
 
-        return BookMapper.to_show_books(books), total
+            # Подсчитать общее количество
+            total = await uow.books.count_by_filters(
+                title=title,
+                author=author,
+                genre=genre,
+                year=year,
+                available=available,
+            )
+
+            return BookMapper.to_show_books(books), total
 
     # ========== ПРИВАТНЫЕ МЕТОДЫ ==========
 
@@ -273,8 +234,8 @@ class BookService:
             raise InvalidPagesException(pages)
 
     async def _enrich_book_data(
-            self,
-            book_data: BookCreate,
+        self,
+        book_data: BookCreate,
     ) -> dict | None:
         """
         Обогатить данные книги из Open Library.
@@ -291,9 +252,10 @@ class BookService:
         except OpenLibraryException:
             # Логируем, но не прерываем создание книги
             import logging
+
             logger = logging.getLogger(__name__)
             logger.warning(
                 "Failed to enrich book data from Open Library",
-                extra={"title": book_data.title, "author": book_data.author}
+                extra={"title": book_data.title, "author": book_data.author},
             )
             return None

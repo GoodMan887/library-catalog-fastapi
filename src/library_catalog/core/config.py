@@ -25,9 +25,7 @@ class Settings(BaseSettings):
     openlibrary_timeout: float = 10.0
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        case_sensitive=False,
-        extra='ignore'
+        env_file=".env", case_sensitive=False, extra="ignore"
     )
 
     @property

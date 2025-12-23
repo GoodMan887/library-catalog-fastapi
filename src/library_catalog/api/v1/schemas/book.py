@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, field_validator
 
 class BookBase(BaseModel):
     """Базовая схема с общими полями."""
+
     title: str = Field(..., min_length=1, max_length=500)
     author: str = Field(..., min_length=1, max_length=300)
     year: int = Field(..., ge=1000, le=2100)
@@ -14,6 +15,7 @@ class BookBase(BaseModel):
 
 class BookCreate(BookBase):
     """Схема для создания книги."""
+
     isbn: str | None = Field(None, min_length=10, max_length=20)
     description: str | None = Field(None, max_length=5000)
 
@@ -44,7 +46,7 @@ class BookCreate(BookBase):
                     "year": 2008,
                     "genre": "Programming",
                     "isbn": "978-0132350884",
-                    "description": "A Handbook of Agile Software Craftsmanship"
+                    "description": "A Handbook of Agile Software Craftsmanship",
                 }
             ]
         }
@@ -53,6 +55,7 @@ class BookCreate(BookBase):
 
 class BookUpdate(BaseModel):
     """Схема для обновления книги (все поля опциональны)."""
+
     title: str | None = Field(None, min_length=1, max_length=500)
     author: str | None = Field(None, min_length=1, max_length=300)
     year: int | None = Field(None, ge=1000, le=2100)
@@ -65,6 +68,7 @@ class BookUpdate(BaseModel):
 
 class ShowBook(BookBase):
     """Схема для отображения книги (response)."""
+
     book_id: UUID
     available: bool
     isbn: str | None
@@ -89,11 +93,11 @@ class ShowBook(BookBase):
                     "description": "A Handbook of Agile Software Craftsmanship",
                     "extra": {
                         "cover_url": "https://covers.openlibrary.org/b/id/123-L.jpg",
-                        "subjects": ["Computer Science", "Software Engineering"]
+                        "subjects": ["Computer Science", "Software Engineering"],
                     },
                     "created_at": "2024-01-01T12:00:00",
-                    "updated_at": "2024-01-01T12:00:00"
+                    "updated_at": "2024-01-01T12:00:00",
                 }
             ]
-        }
+        },
     }

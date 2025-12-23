@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class BaseRepository(Generic[T]):
@@ -58,9 +58,9 @@ class BaseRepository(Generic[T]):
         return True
 
     async def get_all(
-            self,
-            limit: int = 100,
-            offset: int = 0,
+        self,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[T]:
         """Получить все записи с пагинацией."""
         request = select(self.model).limit(limit).offset(offset)

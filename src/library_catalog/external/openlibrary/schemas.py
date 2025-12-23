@@ -18,5 +18,6 @@ class OpenLibrarySearchDoc(BaseModel):
 
 class OpenLibrarySearchResponse(BaseModel):
     """Ответ от /search.json"""
+
     numFound: str
     docs: list[OpenLibrarySearchDoc]

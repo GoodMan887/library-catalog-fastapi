@@ -1,13 +1,9 @@
 from uuid import UUID
 from typing import Annotated
 
-from fastapi import  APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
-from ..schemas.book import (
-    BookCreate,
-    BookUpdate,
-    ShowBook
-)
+from ..schemas.book import BookCreate, BookUpdate, ShowBook
 from ..schemas.common import PaginatedResponse, PaginationParams
 from ...dependencies import BookServiceDep
 
@@ -20,11 +16,11 @@ router = APIRouter(prefix="/books", tags=["Books"])
     response_model=ShowBook,
     status_code=status.HTTP_201_CREATED,
     summary="Создать книгу",
-    description="Создать новую книгу в каталоге с автоматическим обогащением из Open Library"
+    description="Создать новую книгу в каталоге с автоматическим обогащением из Open Library",
 )
 async def create_book(
-        book_data: BookCreate,
-        service: BookServiceDep,
+    book_data: BookCreate,
+    service: BookServiceDep,
 ):
     """
     Создать новую книгу.
@@ -40,7 +36,6 @@ async def create_book(
     return await service.create_book(book_data)
 
 
-
 @router.get(
     "/",
     response_model=PaginatedResponse[ShowBook],
@@ -48,13 +43,13 @@ async def create_book(
     description="Получить список книг с фильтрацией и пагинацией",
 )
 async def get_books(
-        service: BookServiceDep,
-        pagination: Annotated[PaginationParams, Depends()],
-        title: str | None = Query(None, description="Поиск по названию"),
-        author: str | None = Query(None, description="Поиск по автору"),
-        genre: str | None = Query(None, description="Фильтр по жанру"),
-        year: int | None = Query(None, description="Фильтр по году"),
-        available: bool | None = Query(None, description="Фильтр по доступности"),
+    service: BookServiceDep,
+    pagination: Annotated[PaginationParams, Depends()],
+    title: str | None = Query(None, description="Поиск по названию"),
+    author: str | None = Query(None, description="Поиск по автору"),
+    genre: str | None = Query(None, description="Фильтр по жанру"),
+    year: int | None = Query(None, description="Фильтр по году"),
+    available: bool | None = Query(None, description="Фильтр по доступности"),
 ):
     """
     Получить список книг с фильтрацией.
@@ -90,8 +85,8 @@ async def get_books(
     description="Получить информацию о конкретной книге по ID",
 )
 async def get_book(
-        book_id: UUID,
-        service: BookServiceDep,
+    book_id: UUID,
+    service: BookServiceDep,
 ):
     """
     Получить книгу по ID.
@@ -112,9 +107,9 @@ async def get_book(
     description="Частичное обновление книги (передаются только изменяемые поля)",
 )
 async def update_book(
-        book_id: UUID,
-        book_data: BookUpdate,
-        service: BookServiceDep,
+    book_id: UUID,
+    book_data: BookUpdate,
+    service: BookServiceDep,
 ):
     """
     Обновить книгу.
@@ -139,8 +134,8 @@ async def update_book(
     description="Удалить книгу из каталога",
 )
 async def delete_book(
-        book_id: UUID,
-        service: BookServiceDep,
+    book_id: UUID,
+    service: BookServiceDep,
 ):
     """
     Удалить книгу.

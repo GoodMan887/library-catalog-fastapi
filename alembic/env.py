@@ -20,8 +20,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 config = context.config
 
 config.set_main_option(
-    "sqlalchemy.url",
-    str(settings.database_url).replace("+asyncpg", "")
+    "sqlalchemy.url", str(settings.database_url).replace("+asyncpg", "")
 )
 
 # Interpret the config file for Python logging.

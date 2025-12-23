@@ -4,6 +4,7 @@ from ...api.v1.schemas.book import ShowBook
 
 class BookMapper:
     """Маппер для преобразования Book entity в DTO."""
+
     @staticmethod
     def to_show_book(book: Book) -> ShowBook:
         """

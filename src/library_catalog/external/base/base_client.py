@@ -14,12 +14,13 @@ class BaseApiClient(ABC):
     - Логирование
     - Timeout management
     """
+
     def __init__(
-            self,
-            base_url: str,
-            timeout: float = 10.0,
-            retries: int = 3,
-            backoff: float = 0.5,
+        self,
+        base_url: str,
+        timeout: float = 10.0,
+        retries: int = 3,
+        backoff: float = 0.5,
     ):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
@@ -40,12 +41,12 @@ class BaseApiClient(ABC):
         return self.base_url + path
 
     async def request(
-            self,
-            method: str,
-            path: str,
-            params: dict | None = None,
-            json: dict | None = None,
-            headers: dict | None = None,
+        self,
+        method: str,
+        path: str,
+        params: dict | None = None,
+        json: dict | None = None,
+        headers: dict | None = None,
     ) -> dict:
         """
         Выполнить HTTP запрос с retry логикой.
@@ -58,7 +59,9 @@ class BaseApiClient(ABC):
 
         for attempt in range(self.retries):
             try:
-                self.logger.debug(f"[Attempt {attempt + 1}/{self.retries}] {method} {url}")
+                self.logger.debug(
+                    f"[Attempt {attempt + 1}/{self.retries}] {method} {url}"
+                )
 
                 response = await self._client.request(
                     method=method,
@@ -79,7 +82,7 @@ class BaseApiClient(ABC):
             except httpx.HTTPStatusError as e:
                 # 5xx ошибки - retry
                 if e.response.status_code >= 500 and attempt < self.retries - 1:
-                    wait_time = self.backoff * (2 ** attempt)
+                    wait_time = self.backoff * (2**attempt)
                     self.logger.warning(f"Server error, retrying in {wait_time}s...")
                     await asyncio.sleep(wait_time)
                 else:
@@ -91,7 +94,7 @@ class BaseApiClient(ABC):
                     self.logger.error(f"Timeout after {self.retries} attempts")
                     raise
 
-                wait_time = self.backoff * (2 ** attempt)
+                wait_time = self.backoff * (2**attempt)
                 self.logger.info(f"Timeout, retrying in {wait_time}s...")
                 await asyncio.sleep(wait_time)
 
@@ -100,7 +103,7 @@ class BaseApiClient(ABC):
                 if attempt == self.retries - 1:
                     raise
 
-                wait_time = self.backoff * (2 ** attempt)
+                wait_time = self.backoff * (2**attempt)
                 await asyncio.sleep(wait_time)
 
     async def _get(self, path: str, **kwargs) -> dict:
