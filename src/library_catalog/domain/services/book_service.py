@@ -5,6 +5,9 @@ from ...external.openlibrary.client import OpenLibraryClient
 from ..exceptions import *
 from ..mappers.book_mapper import BookMapper
 
+import logging
+
+
 class BookService:
     """
     Сервис для работы с книгами.
@@ -18,6 +21,7 @@ class BookService:
     ):
         self.book_repo = book_repository
         self.ol_client = openlibrary_client
+        self.logger = logging.getLogger(__name__)
 
     async def create_book(self, book_data: BookCreate) -> ShowBook:
         """
@@ -39,35 +43,69 @@ class BookService:
             InvalidPagesException: Если страницы <= 0
             BookAlreadyExistsException: Если ISBN уже существует
         """
-        # 1. Валидация бизнес-правил
-        self._validate_book_data(book_data)
 
-        # 2. Проверка уникальности ISBN
-        if book_data.isbn:
-            existing = await self.book_repo.find_by_isbn(book_data.isbn)
-            if existing:
-                raise BookAlreadyExistsException(book_data.isbn)
-
-        # 3. Обогащение данных из Open Library
-        extra = await self._enrich_book_data(book_data)
-
-        # 4. Создание в БД
-        book = await self.book_repo.create(
-            title=book_data.title,
-            author=book_data.author,
-            year=book_data.year,
-            genre=book_data.genre,
-            pages=book_data.pages,
-            isbn=book_data.isbn,
-            description=book_data.description,
-            extra=extra,
+        self.logger.info(
+            "Creating book",
+            extra={
+                "title": book_data.title,
+                "author": book_data.author,
+                "isbn": book_data.isbn,
+            }
         )
 
-        # 5. Явный commit в сервисе
-        await self.book_repo.session.commit()
+        try:
+            # 1. Валидация бизнес-правил
+            self._validate_book_data(book_data)
 
-        # 6. Маппинг в DTO
-        return BookMapper.to_show_book(book)
+            # 2. Проверка уникальности ISBN
+            if book_data.isbn:
+                existing = await self.book_repo.find_by_isbn(book_data.isbn)
+                if existing:
+                    raise BookAlreadyExistsException(book_data.isbn)
+
+            # 3. Обогащение данных из Open Library
+            extra = await self._enrich_book_data(book_data)
+
+            # 4. Создание в БД
+            book = await self.book_repo.create(
+                title=book_data.title,
+                author=book_data.author,
+                year=book_data.year,
+                genre=book_data.genre,
+                pages=book_data.pages,
+                isbn=book_data.isbn,
+                description=book_data.description,
+                extra=extra,
+            )
+
+            # 5. Явный commit в сервисе
+            await self.book_repo.session.commit()
+
+            self.logger.info(
+                "Book created successfully",
+                extra={"book_id": str(book.book_id)}
+            )
+
+            # 6. Маппинг в DTO
+            return BookMapper.to_show_book(book)
+
+        except BookAlreadyExistsException:
+            self.logger.warning(
+                "Duplicate ISBN",
+                extra={"isbn": book_data.isbn}
+            )
+            raise
+
+        except Exception as e:
+            self.logger.error(
+                "Failed to create book",
+                extra={
+                    "error": str(e),
+                    "title": book_data.title,
+                },
+                exc_info=True
+            )
+            raise
 
     async def get_book(self, book_id: UUID) -> ShowBook:
         """
@@ -92,26 +130,49 @@ class BookService:
 
         Обновляются только переданные поля.
         """
-        # Проверить существование
-        existing = await self.book_repo.get_by_id(book_id)
-        if existing is None:
-            raise BookNotFoundException(book_id)
 
-        # Валидация если обновляется год/страницы
-        if book_data.year is not None:
-            self._validate_year(book_data.year)
-        if book_data.pages is not None:
-            self._validate_pages(book_data.pages)
-
-        # Обновить
-        updated = await self.book_repo.update(
-            book_id,
-            **book_data.model_dump(exclude_unset=True),
+        self.logger.info(
+            "Updating book",
+            extra={
+                "book_id": str(book_id),
+                "update_fields": book_data.model_dump(exclude_unset=True)
+            }
         )
 
-        await self.book_repo.session.commit()
+        try:
+            # Проверить существование
+            existing = await self.book_repo.get_by_id(book_id)
+            if existing is None:
+                raise BookNotFoundException(book_id)
 
-        return BookMapper.to_show_book(updated)
+            # Валидация если обновляется год/страницы
+            if book_data.year is not None:
+                self._validate_year(book_data.year)
+            if book_data.pages is not None:
+                self._validate_pages(book_data.pages)
+
+            # Обновить
+            updated = await self.book_repo.update(
+                book_id,
+                **book_data.model_dump(exclude_unset=True),
+            )
+
+            await self.book_repo.session.commit()
+
+            self.logger.info(
+                "Book updated successfully",
+                extra={"book_id": str(book_id)}
+            )
+
+            return BookMapper.to_show_book(updated)
+
+        except Exception as e:
+            self.logger.error(
+                "Failed to update book",
+                extra={"book_id": str(book_id), "error": str(e)},
+                exc_info=True
+            )
+            raise
 
     async def delete_book(self, book_id: UUID) -> None:
         """
@@ -120,11 +181,38 @@ class BookService:
         Raises:
             BookNotFoundException: Если книга не найдена
         """
-        deleted = await self.book_repo.delete(book_id)
-        if not deleted:
-            raise BookNotFoundException(book_id)
 
-        await self.book_repo.session.commit()
+        self.logger.info(
+            "Deleting book",
+            extra={"book_id": str(book_id)}
+        )
+
+        try:
+            deleted = await self.book_repo.delete(book_id)
+            if not deleted:
+                self.logger.warning(
+                    "Book not found for deletion",
+                    extra={"book_id": str(book_id)}
+                )
+                raise BookNotFoundException(book_id)
+
+            await self.book_repo.session.commit()
+
+            self.logger.info(
+                "Book deleted successfully",
+                extra={"book_id": str(book_id)}
+            )
+
+        except BookNotFoundException:
+            raise
+
+        except Exception as e:
+            self.logger.error(
+                "Failed to delete book",
+                extra={"book_id": str(book_id), "error": str(e)},
+                exc_info=True
+            )
+            raise
 
     async def search_books(
             self,
